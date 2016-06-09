@@ -1,0 +1,1525 @@
+1                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+NOTE: Unable to open SASUSER.REGSTRY. WORK.REGSTRY will be opened instead.
+NOTE: All registry changes will be lost at the end of the session.
+
+NOTE: Copyright (c) 2002-2003 by SAS Institute Inc., Cary, NC, USA. 
+NOTE: SAS (r) 9.1 (TS1M3)
+      Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+NOTE: This session is executing on the Linux 2.6.9-42.dunnhumby_PS351_P2 platform.
+
+
+
+NOTE: (E9BX04) SAS 9.1.3 SP 4
+
+NOTE: SAS initialization used:
+      real time           0.00 seconds
+      cpu time            0.03 seconds
+      
+
+NOTE: AUTOEXEC processing beginning; file is /sas/SASLIB/profiles/kroger_autoexec.sas.
+
+**************************************************************
+*                                                            *
+*    dunnhumby SAS profile enabled for :  Kroger             *
+*                                                            *
+**************************************************************
+The code executed on us-ham-svb-0074.dunnhumby.co.uk in the WORK library located in 
+/sastmp/SAS_work48EA0000060A_us-ham-svb-0074.dunnhumby.co.uk
+
+NOTE: AUTOEXEC processing completed.
+
+1          %include "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel.sas";
+174        
+175        
+176        libname par "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory";
+NOTE: Libref PAR was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+177        %macro to_write(put_this, putthis2, third);
+178        
+179        	data par.&put_this.;
+180        		x = "&put_this.";
+181        		y = "&putthis2.";
+182        		z = "&third.";
+183        		output;
+184        	run;
+185        
+186        	data _null_;
+187        		slept = sleep(20000);
+188        	run;
+189        
+190        %mend;
+191        
+192        options mprint;
+193        %parallel(macro=to_write, param1=msg1 message2 messagee3 messaged4 newmsg,
+194        param2=second1 second2 second3 secnd4 sc5, stagger=1000, cleanup=N);
+MPRINT(PARALLEL):   
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is 
+2                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+written is executed If the script on which it is written is imported, then the code will not run mask_code(filename_keyword, 
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified 
+will only run when the root script that is running contains the filename_keyword macro1 ... -- these are a list of macros that will 
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the 
+order specified DO NOT INCLUDE THE PERCENT SIGN WHEN YOU ARE SPECIFYING MACROS makes sas programs work like python programs if 
+__name__=="__main__" 
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+;
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in 
+which it was created;
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+MPRINT(PARALLEL):   * that way, we can import the file and get the information about the customers like the formats without running 
+the whole program again;
+MPRINT(PARALLEL):   * we put all of our code inside another macro and mask that macro...;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but 
+the code inside this runpar does not run again;
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   data _null_;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+MPRINT(MASK_CODE):   if index(upcase(xpath), "KROGER_AUTOEXEC") = 0 then call symput('__filename_keyword', scan(xpath,-1,'/'));
+MPRINT(MASK_CODE):   run;
+
+NOTE: There were 1 observations read from the data set SASHELP.VEXTFL.
+      WHERE UPCASE(xpath) like '%.SAS';
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(MASK_CODE):   * if we are in eg and no filename keyword was made, then we know we are in the original program because sas 
+wont create the filename keyword with the program;
+MPRINT(_RUNPAR):   
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+module_name: format_macro_vars author: Brian Ritz purpose: This module contains macros that streamline working with macro variables 
+containing dates and lists (such as lists of products, commodities, divisions, etc...) List of useable macros in this module (there 
+are a couple support macros also in this module whose sole purpose is to support the useable macros): %single_unquote(invar, delim) 
+-- removes single quotes from a list contained in the macro variable &invar, and delimits the list by &delim. %single_quote(invar, 
+delim) -- adds single quotes to a list contained in the macro variable &invar, and delimits the list by &delim 
+%get_today(varname,quote = Y) -- returns todays date in YYYYMMDD format to a macro variable called &varname %kroger_week(date, 
+varname, informat=YYMMDD8., quote=Y, pxy=) -- returns the kroger week of the &date(specified in YYYYMMDD form as default) to a 
+macro variable called &varname %current_kroger_week(varname, quote=Y, pxy=) -- returns the latest kroger week in the database to a 
+macro variable called &varname %kroger_week_math(kwk, diff, varname, quote=Y, pxy=) -- returns the kroger week &diff weeks away 
+from &kwk to a macro variable called &varname %date_math(date, diff, varname, quote=Y, pxy=) -- returns the date in YYYYMMDD form 
+&diff days away from &date (also in YYYYMMDD form) to a macro variable called &varname %latest_x_weeks(x, beg_varname, end_varname, 
+quote=Y, pxy=) -- returns two macro variables (named &beg_varname and &end_varname) that represent the start week and end week of 
+the last &x weeks in the kroger database %YYYYMMDD(krog_wk, newvar, day=1, quote=Y, pxy=) -- returns the date in YYYYMMDD form of 
+the kroger week specifiec in &krog_wk. to a macro variable called &newvar %MMDDYYYY(krog_wk, newvar, quote=Y, pxy=) -- returns the 
+date in MMDDYYYY form of the kroger week specifiec in &krog_wk. to a macro variable called &newvar %MMDDYY(krog_wk, newvar, 
+quote=Y, pxy=) -- returns the date in MMDDYY form of the kroger week specifiec in &krog_wk. to a macro variable called &newvar 
+%current_date(varname, format=MMDDYYN8., quote=Y, pxy=) returns the latest date available in the kroger TRANSACTION database to a 
+macro variable called &varname format is a sas data format (see 
+http://support.sas.com/documentation/cdl/en/etsug/60372/HTML/default/viewer.htm#etsug_intervals_sect010.htm) 
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+;
+MPRINT(_RUNPAR):   *NOW THE ACTUAL MACRO;
+3                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(_RUNPAR):   *flag to tell other programs that this module was already imported...you can look for this flag in other 
+programs to determine if you must include this module or not;
+MPRINT(_RUNPAR):   *remove the single quotes around a list of things in a macro variable, again, you can specify your delimiter;
+MPRINT(_RUNPAR):   *put single quotes around multiple things;
+MPRINT(_RUNPAR):   *specify any delimiter;
+MPRINT(_RUNPAR):   *gets the kroger week of a date in MMDDYYYY form;
+MPRINT(_RUNPAR):   *gets the current kroger week from exadata;
+MPRINT(_RUNPAR):   * creates a macro variable that is _x_diff days away from the macro varaible given in _x_date which is assumed 
+to be in MMDDYYYY form;
+MPRINT(_RUNPAR):   * creates two macro variables that represent the latest x weeks in our data solution;
+MPRINT(_RUNPAR):   *formats a kroger fis week as a date and puts it into another macro variable;
+MPRINT(_RUNPAR):   *formats a kroger fis week;
+MPRINT(_RUNPAR):   *formats a kroger fis week;
+MPRINT(_RUNPAR):   ********** GET THE ORIGINAL PROGRAM FILE -- IE THE PROGRAM THAT WAS BATCHED AND CONTAINED THE PARALLEL MACRO 
+CALL;
+MPRINT(_RUNPAR):   * if in eg -- doesnt work because we cant kick off batch programs on the us-ham-svb-0066 -- just for interactive 
+sessions;
+MPRINT(_RUNPAR):   * if in batch -- put file in;
+MPRINT(_RUNPAR):   data test;
+MPRINT(_RUNPAR):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+MPRINT(_RUNPAR):   if index(upcase(xpath), "KROGER_AUTOEXEC") = 0 then call symput('original_sas_prog', strip(xpath));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 1 observations read from the data set SASHELP.VEXTFL.
+      WHERE UPCASE(xpath) like '%.SAS';
+NOTE: The data set WORK.TEST has 1 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+4                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17262 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," 
+,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+5                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17263 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   *************** get the directory of the original sas prog -- this is where we will write out our new files;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas'"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+6                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17264 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   *************** check if the parameters are all the same length as we read them into macro vars param_2, 
+param_3, param_4, etc..;
+param1 is msg1 message2 messagee3 messaged4 newmsg
+param2 is second1 second2 second3 secnd4 sc5
+param3 is
+param4 is
+MPRINT(_RUNPAR):   *************** loop through each file -- one loop for every word in param_2;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+7                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17265 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+8                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," 
+,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17266 observations and 5 variables.
+9                                                          The SAS System                         15:22 Wednesday, February 25, 2015
+
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $400;
+MPRINT(_RUNPAR):   file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas";
+MPRINT(_RUNPAR):   put "filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;";
+MPRINT(_RUNPAR):   put "%include origfil;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(msg1, second1)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas" is:
+      File Name=/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas,
+      Owner Name=brianr,Group Name=Unix_Users,
+      Access Permission=rw-rw----
+
+NOTE: 3 records were written to the file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas".
+      The minimum record length was 17.
+      The maximum record length was 103.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   ***KICK OFF THE FILE;
+MPRINT(_RUNPAR):   x "/sas/SAS_9.1/sas -noterminal /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas 
+-log /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log &";
+MPRINT(_RUNPAR):   *** SLEEP TO STAGGER;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $400;
+MPRINT(_RUNPAR):   file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas";
+10                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(_RUNPAR):   put "filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;";
+MPRINT(_RUNPAR):   put "%include origfil;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(message2, second2)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas" is:
+      File Name=/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas,
+      Owner Name=brianr,Group Name=Unix_Users,
+      Access Permission=rw-rw----
+
+NOTE: 3 records were written to the file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas".
+      The minimum record length was 17.
+      The maximum record length was 103.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   ***KICK OFF THE FILE;
+MPRINT(_RUNPAR):   x "/sas/SAS_9.1/sas -noterminal /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas 
+-log /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log &";
+MPRINT(_RUNPAR):   *** SLEEP TO STAGGER;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $400;
+MPRINT(_RUNPAR):   file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas";
+MPRINT(_RUNPAR):   put "filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;";
+MPRINT(_RUNPAR):   put "%include origfil;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(messagee3, second3)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas" is:
+      File Name=/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas,
+      Owner Name=brianr,Group Name=Unix_Users,
+      Access Permission=rw-rw----
+
+NOTE: 3 records were written to the file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas".
+      The minimum record length was 17.
+      The maximum record length was 103.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   ***KICK OFF THE FILE;
+MPRINT(_RUNPAR):   x "/sas/SAS_9.1/sas -noterminal /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas 
+-log /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log &";
+MPRINT(_RUNPAR):   *** SLEEP TO STAGGER;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+11                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $400;
+MPRINT(_RUNPAR):   file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas";
+MPRINT(_RUNPAR):   put "filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;";
+MPRINT(_RUNPAR):   put "%include origfil;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(messaged4, secnd4)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas" is:
+      File Name=/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas,
+      Owner Name=brianr,Group Name=Unix_Users,
+      Access Permission=rw-rw----
+
+NOTE: 3 records were written to the file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas".
+      The minimum record length was 17.
+      The maximum record length was 103.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***KICK OFF THE FILE;
+MPRINT(_RUNPAR):   x "/sas/SAS_9.1/sas -noterminal /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas 
+-log /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log &";
+MPRINT(_RUNPAR):   *** SLEEP TO STAGGER;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $400;
+MPRINT(_RUNPAR):   file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas";
+MPRINT(_RUNPAR):   put "filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;";
+MPRINT(_RUNPAR):   put "%include origfil;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(newmsg, sc5)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas" is:
+      File Name=/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas,
+      Owner Name=brianr,Group Name=Unix_Users,
+      Access Permission=rw-rw----
+
+NOTE: 3 records were written to the file "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas".
+      The minimum record length was 17.
+      The maximum record length was 103.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***KICK OFF THE FILE;
+MPRINT(_RUNPAR):   x "/sas/SAS_9.1/sas -noterminal /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas 
+12                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+-log /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log &";
+MPRINT(_RUNPAR):   *** SLEEP TO STAGGER;
+MPRINT(_RUNPAR):   options NOQUOTELENMAX;
+MPRINT(_RUNPAR):   * loop to wait until they are all done;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("all_new_progs",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17267 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+13                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas"," ,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("all_new_progs",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+14                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+      
+
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 17268 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(120000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           2:00.00
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * pipe in processes on the linux server and look for the file names;
+MPRINT(_RUNPAR):   filename linux PIPE 'ps -eo command';
+MPRINT(_RUNPAR):   libname sasdata "/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory/";
+NOTE: Libname SASDATA refers to the same physical library as PAR.
+NOTE: Libref SASDATA was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile linux firstobs=2 end=eof;
+MPRINT(_RUNPAR):   length command $50 program $100;
+MPRINT(_RUNPAR):   input command $ program;
+MPRINT(_RUNPAR):   length progs_still_running 8.;
+MPRINT(_RUNPAR):   retain progs_still_running;
+MPRINT(_RUNPAR):   if _n_=1 then progs_still_running=0;
+15                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(_RUNPAR):   if strip(program) in ('/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas' 
+'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas' 
+'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas' 
+'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas' 
+'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas') then 
+progs_still_running=sum(progs_still_running,1);
+MPRINT(_RUNPAR):   if eof and progs_still_running=0 then do;
+MPRINT(_RUNPAR):   call symput("rc","1");
+MPRINT(_RUNPAR):   end;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The infile LINUX is:
+      Pipe command="ps -eo command"
+
+NOTE: 2079 records were read from the infile LINUX.
+      The minimum record length was 2.
+      The maximum record length was 256.
+      One or more lines were truncated.
+NOTE: SAS went to a new line when INPUT statement reached past the end of a line.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   options QUOTELENMAX;
+MPRINT(_RUNPAR):   * consolidate logs into the original programs log;
+MPRINT(_RUNPAR):   options nosource nonotes noquotelenmax;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("all_new_logs",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+16                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to countw("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log"," ,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log 
+/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("all_new_logs",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+-----------------------------------------------------------------------------------------------
+---BEGINNING OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log';
+MPRINT(_RUNPAR):   input @1 line $500.;
+MPRINT(_RUNPAR):   put line;
+MPRINT(_RUNPAR):   run;
+Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+17                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+real time           0.00 seconds
+**************************************************************
+*    dunnhumby SAS profile enabled for :  Kroger             *
+**************************************************************
+/sastmp/SAS_work23160000062B_us-ham-svb-0074.dunnhumby.co.uk
+1          filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;
+Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+***********************************************************************************************************************************
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the
+__name__=="__main__"
+***********************************************************************************************************************************
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+the whole program again;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+
+MPRINT(MASK_CODE):   run;
+cpu time            0.01 seconds
+
+wont create the filename keyword with the program;
+NOTE (mask_code macro): _runpar
+297        %to_write(msg1, second1);
+MPRINT(TO_WRITE):   x = "msg1";
+MPRINT(TO_WRITE):   z = "";
+MPRINT(TO_WRITE):   run;
+real time           0.00 seconds
+
+MPRINT(TO_WRITE):   data _null_;
+MPRINT(TO_WRITE):   run;
+real time           20.00 seconds
+cpu time            0.11 seconds
+-----------------------------------------------------------------------------------------------
+---END OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.log'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thislog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+18                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_1.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thissas",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+-----------------------------------------------------------------------------------------------
+---BEGINNING OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log';
+MPRINT(_RUNPAR):   input @1 line $500.;
+MPRINT(_RUNPAR):   put line;
+MPRINT(_RUNPAR):   run;
+Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+19                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+real time           0.00 seconds
+**************************************************************
+*    dunnhumby SAS profile enabled for :  Kroger             *
+**************************************************************
+/sastmp/SAS_workFF7400000638_us-ham-svb-0074.dunnhumby.co.uk
+1          filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;
+Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+***********************************************************************************************************************************
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the
+__name__=="__main__"
+***********************************************************************************************************************************
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+the whole program again;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+
+MPRINT(MASK_CODE):   run;
+cpu time            0.01 seconds
+
+wont create the filename keyword with the program;
+NOTE (mask_code macro): _runpar
+297        %to_write(message2, second2);
+MPRINT(TO_WRITE):   x = "message2";
+MPRINT(TO_WRITE):   z = "";
+MPRINT(TO_WRITE):   run;
+real time           0.00 seconds
+
+MPRINT(TO_WRITE):   data _null_;
+MPRINT(TO_WRITE):   run;
+real time           20.00 seconds
+cpu time            0.11 seconds
+-----------------------------------------------------------------------------------------------
+---END OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.log'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thislog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+20                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_2.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thissas",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+-----------------------------------------------------------------------------------------------
+---BEGINNING OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log';
+MPRINT(_RUNPAR):   input @1 line $500.;
+MPRINT(_RUNPAR):   put line;
+MPRINT(_RUNPAR):   run;
+Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+21                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+real time           0.00 seconds
+**************************************************************
+*    dunnhumby SAS profile enabled for :  Kroger             *
+**************************************************************
+/sastmp/SAS_workEA4200000640_us-ham-svb-0074.dunnhumby.co.uk
+1          filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;
+Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+***********************************************************************************************************************************
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the
+__name__=="__main__"
+***********************************************************************************************************************************
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+the whole program again;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+
+MPRINT(MASK_CODE):   run;
+cpu time            0.00 seconds
+
+wont create the filename keyword with the program;
+NOTE (mask_code macro): _runpar
+297        %to_write(messagee3, second3);
+MPRINT(TO_WRITE):   x = "messagee3";
+MPRINT(TO_WRITE):   z = "";
+MPRINT(TO_WRITE):   run;
+real time           0.00 seconds
+
+MPRINT(TO_WRITE):   data _null_;
+MPRINT(TO_WRITE):   run;
+real time           20.00 seconds
+cpu time            0.12 seconds
+-----------------------------------------------------------------------------------------------
+---END OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.log'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thislog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+22                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_3.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thissas",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+-----------------------------------------------------------------------------------------------
+---BEGINNING OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log';
+MPRINT(_RUNPAR):   input @1 line $500.;
+MPRINT(_RUNPAR):   put line;
+MPRINT(_RUNPAR):   run;
+Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+23                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+real time           0.00 seconds
+**************************************************************
+*    dunnhumby SAS profile enabled for :  Kroger             *
+**************************************************************
+/sastmp/SAS_work29B700000654_us-ham-svb-0074.dunnhumby.co.uk
+1          filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;
+Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+***********************************************************************************************************************************
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the
+__name__=="__main__"
+***********************************************************************************************************************************
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+the whole program again;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+
+MPRINT(MASK_CODE):   run;
+cpu time            0.01 seconds
+
+wont create the filename keyword with the program;
+NOTE (mask_code macro): _runpar
+297        %to_write(messaged4, secnd4);
+MPRINT(TO_WRITE):   x = "messaged4";
+MPRINT(TO_WRITE):   z = "";
+MPRINT(TO_WRITE):   run;
+real time           0.00 seconds
+
+MPRINT(TO_WRITE):   data _null_;
+MPRINT(TO_WRITE):   run;
+real time           20.00 seconds
+cpu time            0.09 seconds
+-----------------------------------------------------------------------------------------------
+---END OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.log'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thislog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+24                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_4.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thissas",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+-----------------------------------------------------------------------------------------------
+---BEGINNING OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   infile '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log';
+MPRINT(_RUNPAR):   input @1 line $500.;
+MPRINT(_RUNPAR):   put line;
+MPRINT(_RUNPAR):   run;
+Licensed to DUNNHUMBY - ANALYTICS 166 CORES, Site 0022874029.
+25                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+real time           0.00 seconds
+**************************************************************
+*    dunnhumby SAS profile enabled for :  Kroger             *
+**************************************************************
+/sastmp/SAS_work7F6200000663_us-ham-svb-0074.dunnhumby.co.uk
+1          filename origfil '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas' ;
+Physical Name: /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/parallel_directory
+***********************************************************************************************************************************
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the
+__name__=="__main__"
+***********************************************************************************************************************************
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the porgram in
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+the whole program again;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+
+MPRINT(MASK_CODE):   run;
+cpu time            0.00 seconds
+
+wont create the filename keyword with the program;
+NOTE (mask_code macro): _runpar
+297        %to_write(newmsg, sc5);
+MPRINT(TO_WRITE):   x = "newmsg";
+MPRINT(TO_WRITE):   z = "";
+MPRINT(TO_WRITE):   run;
+real time           0.00 seconds
+
+MPRINT(TO_WRITE):   data _null_;
+MPRINT(TO_WRITE):   run;
+real time           19.00 seconds
+cpu time            0.09 seconds
+-----------------------------------------------------------------------------------------------
+---END OF LOG '/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log'---
+-----------------------------------------------------------------------------------------------
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.log'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thislog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+26                                                         The SAS System                         15:22 Wednesday, February 25, 2015
+
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to countw("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas'"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/to_write_5.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("thissas",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /kroger/analysis/mounts/mount0/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record "/kroger/analysis/mounts/mount25/claytonb/brianr/experimental_progs/record";
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+MPRINT(RECORD):   libname _record clear;
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   options source notes quotelenmax;
+MPRINT(MASK_CODE):  ;
+MPRINT(PARALLEL):  ;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+NOTE: SAS Institute Inc., SAS Campus Drive, Cary, NC USA 27513-2414
+NOTE: The SAS System used:
+      real time           2:00.00
+      cpu time            0.27 seconds
+      

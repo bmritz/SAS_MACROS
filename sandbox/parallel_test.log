@@ -1,0 +1,1720 @@
+1                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+NOTE: Unable to open SASUSER.PROFILE. WORK.PROFILE will be opened instead.
+NOTE: All profile changes will be lost at the end of the session.
+NOTE: Copyright (c) 2002-2010 by SAS Institute Inc., Cary, NC, USA. 
+NOTE: SAS (r) Proprietary Software 9.3 (TS1M2) 
+      Licensed to DUNNHUMBY - ANALYTICS 128 CORES, Site 51209597.
+NOTE: This session is executing on the Linux 2.6.32-279.el6.x86_64 (LIN X64) platform.
+
+
+
+NOTE: Enhanced analytical products:
+
+SAS/STAT 12.1
+
+NOTE: SAS initialization used:
+      real time           16.69 seconds
+      cpu time            0.03 seconds
+      
+NOTE: Library SASDATA does not exist.
+
+NOTE: AUTOEXEC processing beginning; file is /dhcommon/sas/configuration/kroger/Lev1/SASANA/appserver_autoexec.sas.
+
+**************************************************************
+*                                                            *
+*    dunnhumby SAS profile enabled for :  kroger Lev1       *
+*                                                            *
+**************************************************************
+The code executed on us-ham-svb-0320.dunnhumby.co.uk in the WORK library located in 
+      /sastmp/kroger/SAS_work75D400004870_us-ham-svb-0320.dunnhumby.co.uk
+
+NOTE: AUTOEXEC processing completed.
+
+1          %include "/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_20160225.sas";
+217        
+218        
+219        libname par "/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/parallel_directory";
+NOTE: Libref PAR was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/parallel_directory
+220        
+221        data par.first_dat;
+222        	x = "this was written outside";
+223        	y = "this was also written outside";
+224        run;
+
+NOTE: The data set PAR.FIRST_DAT has 1 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.01 seconds
+      
+
+225        
+226        %macro to_write(put_this, putthis2, third);
+227        
+228        	data par.&put_this.;
+229        		x = "&put_this.";
+230        		y = "&putthis2.";
+231        		z = "&third.";
+232        		output;
+2                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+233        	run;
+234        
+235        	* sleep is here to test whether the program can accurately detect when the program is finished;
+236        	data _null_;
+237        		slept = sleep(80000);
+238        	run;
+239        
+240        %mend;
+241        
+242        data par.second_dat;
+243        	x = 'written outside second';
+244        run;
+
+NOTE: The data set PAR.SECOND_DAT has 1 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.00 seconds
+      
+
+245        
+246        options mprint;
+247        %parallel(macro=to_write, param1=msg1 message2 messagee3 messaged4 newmsg,
+248        param2=second1 second2 second3 secnd4 sc5, stagger=0, cleanup=N);
+MPRINT(PARALLEL):   
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+macro_name: mask_code author: Brian Ritz purpose: this macro allows a snippet of code to only be run when the script on which it is 
+written is executed If the script on which it is written is imported, then the code will not run mask_code(filename_keyword, 
+macro1, ...) filename_keyword -- this should be the name of the sas script where the macros are created -- the macros specified 
+will only run when the root script that is running contains the filename_keyword macro1 ... -- these are a list of macros that will 
+be executed if the script running matches the filename_keyword you can have as many macros run as you want, they will run in the 
+order specified DO NOT INCLUDE THE PERCENT SIGN WHEN YOU ARE SPECIFYING MACROS makes sas programs work like python programs if 
+__name__=="__main__" 
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+;
+MPRINT(PARALLEL):   * the mask macro means that the code within the macro will only run when the root process is the program in 
+which it was created;
+MPRINT(PARALLEL):   * we have this so we can import this file, and not have all the code run;
+MPRINT(PARALLEL):   * that way, we can import the file and get the information about the customers like the formats without running 
+the whole program again;
+MPRINT(PARALLEL):   * we put all of our code inside another macro and mask that macro...;
+MPRINT(PARALLEL):   * we do this so when the newly created programs include the original program, the parallel macro runs again but 
+the code inside this runpar does not run again;
+MPRINT(PARALLEL):   * prevents never ending recursion;
+MPRINT(MASK_CODE):   data _null_;
+MPRINT(MASK_CODE):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+MPRINT(MASK_CODE):   if index(upcase(xpath), "KROGER_AUTOEXEC") = 0 then call symput('__filename_keyword', scan(xpath,-1,'/'));
+MPRINT(MASK_CODE):   run;
+
+NOTE: There were 1 observations read from the data set SASHELP.VEXTFL.
+      WHERE UPCASE(xpath) like '%.SAS';
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(MASK_CODE):   * if we are in eg and no filename keyword was made, then we know we are in the original program because sas 
+3                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+wont create the filename keyword with the program;
+MPRINT(_RUNPAR):   
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+module_name: format_macro_vars author: Brian Ritz purpose: This module contains macros that streamline working with macro variables 
+containing dates and lists (such as lists of products, commodities, divisions, etc...) List of useable macros in this module (there 
+are a couple support macros also in this module whose sole purpose is to support the useable macros): %single_unquote(invar, delim) 
+-- removes single quotes from a list contained in the macro variable &invar, and delimits the list by &delim. %single_quote(invar, 
+delim) -- adds single quotes to a list contained in the macro variable &invar, and delimits the list by &delim 
+%get_today(varname,quote = Y) -- returns todays date in YYYYMMDD format to a macro variable called &varname %kroger_week(date, 
+varname, informat=YYMMDD8., quote=Y, pxy=) -- returns the kroger week of the &date(specified in YYYYMMDD form as default) to a 
+macro variable called &varname %current_kroger_week(varname, quote=Y, pxy=) -- returns the latest kroger week in the database to a 
+macro variable called &varname %kroger_week_math(kwk, diff, varname, quote=Y, pxy=) -- returns the kroger week &diff weeks away 
+from &kwk to a macro variable called &varname %date_math(date, diff, varname, quote=Y, pxy=) -- returns the date in YYYYMMDD form 
+&diff days away from &date (also in YYYYMMDD form) to a macro variable called &varname %latest_x_weeks(x, beg_varname, end_varname, 
+quote=Y, pxy=) -- returns two macro variables (named &beg_varname and &end_varname) that represent the start week and end week of 
+the last &x weeks in the kroger database %YYYYMMDD(krog_wk, newvar, day=1, quote=Y, pxy=) -- returns the date in YYYYMMDD form of 
+the kroger week specifiec in &krog_wk. to a macro variable called &newvar %MMDDYYYY(krog_wk, newvar, day=1, quote=Y, pxy=) -- 
+returns the date in MMDDYYYY form of the kroger week specifiec in &krog_wk. to a macro variable called &newvar %MMDDYY(krog_wk, 
+newvar, day=1, quote=Y, pxy=) -- returns the date in MMDDYY form of the kroger week specifiec in &krog_wk. to a macro variable 
+called &newvar %current_date(varname, format=MMDDYYN8., quote=Y, pxy=) returns the latest date available in the kroger TRANSACTION 
+database to a macro variable called &varname format is a sas data format (see 
+http://support.sas.com/documentation/cdl/en/etsug/60372/HTML/default/viewer.htm#etsug_intervals_sect010.htm) %get_pos(word, list) 
+return the position of word in list, returns 0 if word not found in list -- list should be space delimited 
+*********************************************************************************************************************************** 
+*********************************************************************************************************************************** 
+;
+MPRINT(_RUNPAR):   *NOW THE ACTUAL MACRO;
+MPRINT(_RUNPAR):   *flag to tell other programs that this module was already imported...you can look for this flag in other 
+programs to determine if you must include this module or not;
+MPRINT(_RUNPAR):   *remove the single quotes around a list of things in a macro variable, again, you can specify your delimiter;
+MPRINT(_RUNPAR):   *put single quotes around multiple things;
+MPRINT(_RUNPAR):   *specify any delimiter;
+MPRINT(_RUNPAR):   *gets the kroger week of a date in MMDDYYYY form;
+MPRINT(_RUNPAR):   *gets the current kroger week from exadata;
+MPRINT(_RUNPAR):   * creates a macro variable that is _x_diff days away from the macro varaible given in _x_date which is assumed 
+to be in MMDDYYYY form;
+MPRINT(_RUNPAR):   * creates two macro variables that represent the latest x weeks in our data solution;
+MPRINT(_RUNPAR):   *formats a kroger fis week as a date and puts it into another macro variable;
+MPRINT(_RUNPAR):   *formats a kroger fis week;
+MPRINT(_RUNPAR):   *formats a kroger fis week;
+MPRINT(_RUNPAR):   ********** GET THE ORIGINAL PROGRAM FILE -- IE THE PROGRAM THAT WAS BATCHED AND CONTAINED THE PARALLEL MACRO 
+CALL;
+MPRINT(_RUNPAR):   * if in eg -- doesnt work because we cant kick off batch programs on the us-ham-svb-0066 -- just for interactive 
+sessions;
+MPRINT(_RUNPAR):   * if in batch -- put file in;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set sashelp.vextfl(where=(upcase(xpath) like '%.SAS'));
+MPRINT(_RUNPAR):   if index(upcase(xpath), "AUTOEXEC") = 0 then call symput('original_sas_prog', strip(xpath));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 1 observations read from the data set SASHELP.VEXTFL.
+      WHERE UPCASE(xpath) like '%.SAS';
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+4                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15026 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+5                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," ,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15027 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+6                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   *************** get the directory of the original sas prog -- this is where we will write out our new files;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas'"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas'",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+7                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15028 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas
+MPRINT(_RUNPAR):   x "rm -r /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(_RUNPAR):   x "mkdir /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(_RUNPAR):   * create a sas file in the directory with only the macros from the original program;
+WARNING: The quoted string currently being processed has become more than 262 characters long.  You might have unbalanced quotation 
+         marks.
+MPRINT(_RUNPAR):   x "python /kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_20160225_helper.py 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas";
+MPRINT(_RUNPAR):   *************** check if the parameters are all the same length as we read them into macro vars param_2, 
+param_3, param_4, etc..;
+param1 is msg1 message2 messagee3 messaged4 newmsg
+param2 is second1 second2 second3 secnd4 sc5
+param3 is
+param4 is
+MPRINT(_RUNPAR):   *************** loop through each file -- one loop for every word in param_2;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.26 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+8                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15029 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas"," ,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+9                                                          The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_QUOTE):   call symput("original_sas_prog",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15030 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+10                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas"," 
+,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macr
+oonly.sas",i," ,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("maconly_prog",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15031 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+11                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas"," 
+,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macro
+only.sas",i," ,"),"'"));
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("maconly_prog",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15032 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+12                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $4000;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas";
+MPRINT(_RUNPAR):   put "filename maconly 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas';";
+MPRINT(_RUNPAR):   put "%include maconly;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(msg1, second1)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas" 
+      is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1
+      .sas,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 3 records were written to the file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas".
+      The minimum record length was 17.
+      The maximum record length was 140.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+13                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(_RUNPAR):   length x $4000;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas";
+MPRINT(_RUNPAR):   put "filename maconly 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas';";
+MPRINT(_RUNPAR):   put "%include maconly;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(message2, second2)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas" 
+      is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2
+      .sas,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 3 records were written to the file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas".
+      The minimum record length was 17.
+      The maximum record length was 140.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $4000;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas";
+MPRINT(_RUNPAR):   put "filename maconly 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas';";
+MPRINT(_RUNPAR):   put "%include maconly;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(messagee3, second3)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas" 
+      is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3
+      .sas,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 3 records were written to the file 
+14                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas".
+      The minimum record length was 17.
+      The maximum record length was 140.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $4000;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas";
+MPRINT(_RUNPAR):   put "filename maconly 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas';";
+MPRINT(_RUNPAR):   put "%include maconly;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(messaged4, secnd4)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas" 
+      is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4
+      .sas,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 3 records were written to the file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas".
+      The minimum record length was 17.
+      The maximum record length was 140.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   ***MAKE THE FILE;
+MPRINT(_RUNPAR):   * append a file name onto a large list to check if it is still running later;
+MPRINT(_RUNPAR):   * loop through to create all parameters;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   length x $4000;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas";
+MPRINT(_RUNPAR):   put "filename maconly 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_macroonly.sas';";
+MPRINT(_RUNPAR):   put "%include maconly;";
+MPRINT(_RUNPAR):   * the call to parallel will be masked;
+MPRINT(_RUNPAR):   x = "%"||"to_write(newmsg, sc5)"||";";
+MPRINT(_RUNPAR):   x = strip(x);
+MPRINT(_RUNPAR):   put x;
+MPRINT(_RUNPAR):   run;
+15                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas" 
+      is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5
+      .sas,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 3 records were written to the file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas".
+      The minimum record length was 17.
+      The maximum record length was 140.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   file 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_driver.py";
+MPRINT(_RUNPAR):   put "import os";
+MPRINT(_RUNPAR):   put "import math";
+MPRINT(_RUNPAR):   put "import time";
+MPRINT(_RUNPAR):   put "os.chdir('/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/')";
+MPRINT(_RUNPAR):   put "NUM_DHCHAINS = 0";
+MPRINT(_RUNPAR):   put "prog_names = [fil for fil in os.listdir(os.getcwd()) if fil.endswith('.sas') and fil != 
+'parallel_test_macroonly.sas']";
+MPRINT(_RUNPAR):   put "prog_names = sorted(prog_names, key=lambda x: 
+int(x.replace('.sas','').replace('parallel_test_to_write_','')))";
+MPRINT(_RUNPAR):   put "def chunks(l, n):";
+MPRINT(_RUNPAR):   put "    for i in xrange(0, len(l), n):";
+MPRINT(_RUNPAR):   put "        yield l[i:i+n]";
+MPRINT(_RUNPAR):   put "			";
+MPRINT(_RUNPAR):   put "if NUM_DHCHAINS > 0:";
+MPRINT(_RUNPAR):   put "    chain_size = int(math.ceil(float(len(prog_names)) / float(NUM_DHCHAINS)))";
+MPRINT(_RUNPAR):   put "    chain_commands = ['dhchain -ts -allmail ' + ' '.join(l) for l in list(chunks(prog_names, chain_size))]";
+MPRINT(_RUNPAR):   put "else:";
+MPRINT(_RUNPAR):   put "    chain_commands = ['dhbatch ' + p for p in prog_names]";
+MPRINT(_RUNPAR):   put "			";
+MPRINT(_RUNPAR):   put "for command in chain_commands:";
+MPRINT(_RUNPAR):   put "    os.system(command)";
+MPRINT(_RUNPAR):   put "    time.sleep(0)";
+MPRINT(_RUNPAR):   run;
+
+NOTE: The file 
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_driver.py
+      " is:
+      
+      Filename=/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_d
+      river.py,
+      Owner Name=brianr,Group Name=UNIX_KROGER_AN,
+      Access Permission=rw-rw-r--,
+      Last Modified=Thu Feb 25 16:20:24 2016
+
+NOTE: 20 records were written to the file 
+16                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      "/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_driver.py
+      ".
+      The minimum record length was 3.
+      The maximum record length was 118.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   x "python 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_driver.py";
+MPRINT(_RUNPAR):   options NOQUOTELENMAX;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * loop to wait until they are all done;
+MPRINT(SINGLE_UNQUOTE):   *change any double quotes to single quotes;
+MPRINT(SINGLE_UNQUOTE):   data _null_;
+MPRINT(SINGLE_UNQUOTE):   format var $char5000.0;
+MPRINT(SINGLE_UNQUOTE):   retain var;
+MPRINT(SINGLE_UNQUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas"," ,");
+MPRINT(SINGLE_UNQUOTE):   var = catx(" 
+",var,compress(scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_w
+rite_1.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas",i," 
+,"),"'"));
+MPRINT(SINGLE_UNQUOTE):   end;
+MPRINT(SINGLE_UNQUOTE):   call symput("all_new_progs",strip(var));
+MPRINT(SINGLE_UNQUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_UNQUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+17                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15033 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_UNQUOTE):  ;
+MPRINT(SINGLE_UNQUOTE):   ***;
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   *change any double quotes to single quotes;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SINGLE_QUOTE):   data _null_;
+MPRINT(SINGLE_QUOTE):   format var $char5000.0;
+MPRINT(SINGLE_QUOTE):   retain var;
+MPRINT(SINGLE_QUOTE):   do i = 1 to 
+countw("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas"," ,");
+MPRINT(SINGLE_QUOTE):   var = catx(" 
+",var,cat("'",scan("/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_wr
+ite_1.sas /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas 
+/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas",i," 
+,"),"'"));
+18                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(SINGLE_QUOTE):   end;
+MPRINT(SINGLE_QUOTE):   call symput("all_new_progs",strip(var));
+MPRINT(SINGLE_QUOTE):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   data __lineentry;
+MPRINT(RECORD):   format datetime DATEAMPM.;
+MPRINT(RECORD):   length user macro process $32;
+MPRINT(RECORD):   length errorcode 5.;
+MPRINT(RECORD):   user = "brianr";
+MPRINT(RECORD):   macro = "SINGLE_QUOTE";
+MPRINT(RECORD):   process = "Program /prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test.sas";
+MPRINT(RECORD):   errorcode = 0;
+MPRINT(RECORD):   datetime=datetime();
+MPRINT(RECORD):   run;
+
+NOTE: The data set WORK.__LINEENTRY has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   libname _record "/kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record";
+NOTE: Libref _RECORD was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: /kroger/Lev1/analysis/mp/users/claytonb_m25/brianr/experimental_progs/record
+MPRINT(RECORD):   proc append base= _record.macro_usage_record data=__lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Appending WORK.__LINEENTRY to _RECORD.MACRO_USAGE_RECORD.
+NOTE: There were 1 observations read from the data set WORK.__LINEENTRY.
+NOTE: 1 observations added.
+NOTE: The data set _RECORD.MACRO_USAGE_RECORD has 15034 observations and 5 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RECORD):   proc datasets lib=work nolist;
+MPRINT(RECORD):   delete __lineentry;
+MPRINT(RECORD):   run;
+
+NOTE: Deleting WORK.__LINEENTRY (memtype=DATA).
+MPRINT(RECORD):   libname _record clear;
+NOTE: Libref _RECORD has been deassigned.
+MPRINT(SINGLE_QUOTE):  ;
+MPRINT(SINGLE_QUOTE):   ***;
+MPRINT(_RUNPAR):  ;
+all new progs is: 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_1.sas' 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_2.sas' 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_3.sas' 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_4.sas' 
+'/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/parallel_test_to_write_5.sas'
+19                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 17 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _all_progs;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,4))) = "SAS." and upcase(strip(filename)) ne 
+upcase("parallel_test_macroonly.sas");
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".sas",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._FILENAMES.
+      WHERE (STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 4)))='SAS.') and (UPCASE(STRIP(filename)) not = 
+      'PARALLEL_TEST_MACROONLY.SAS');
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+20                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 17 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _still_running;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,3)))="SO.";
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".os",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._FILENAMES.
+      WHERE STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 3)))='SO.';
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data= _still_running;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data=_all_progs out=_all_progs;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   * all progs is a list of programs still running, if it is empty, we exit the loop;
+MPRINT(_RUNPAR):   data _all_progs _finished;
+MPRINT(_RUNPAR):   merge _all_progs(in=a) _still_running(in=b);
+21                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   if a and b then output _all_progs;
+MPRINT(_RUNPAR):   if a and ~b then output _finished;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: The data set WORK._FINISHED has 0 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * write to the log when a program finishes;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set _finished;
+MPRINT(_RUNPAR):   put "The following program finished at 25FEB16 16:20:";
+MPRINT(_RUNPAR):   put filename;
+MPRINT(_RUNPAR):   put " ";
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 0 observations read from the data set WORK._FINISHED.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * if there are no more obs in _all_progs, then exit;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 17 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+22                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _still_running;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,3)))="SO.";
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".os",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._FILENAMES.
+      WHERE STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 3)))='SO.';
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data= _still_running;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data=_all_progs out=_all_progs;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * all progs is a list of programs still running, if it is empty, we exit the loop;
+MPRINT(_RUNPAR):   data _all_progs _finished;
+MPRINT(_RUNPAR):   merge _all_progs(in=a) _still_running(in=b);
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   if a and b then output _all_progs;
+MPRINT(_RUNPAR):   if a and ~b then output _finished;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: The data set WORK._FINISHED has 0 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   * write to the log when a program finishes;
+23                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set _finished;
+MPRINT(_RUNPAR):   put "The following program finished at 25FEB16 16:20:";
+MPRINT(_RUNPAR):   put filename;
+MPRINT(_RUNPAR):   put " ";
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 0 observations read from the data set WORK._FINISHED.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * if there are no more obs in _all_progs, then exit;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 17 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _still_running;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,3)))="SO.";
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".os",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._FILENAMES.
+      WHERE STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 3)))='SO.';
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+24                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data= _still_running;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._STILL_RUNNING has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data=_all_progs out=_all_progs;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * all progs is a list of programs still running, if it is empty, we exit the loop;
+MPRINT(_RUNPAR):   data _all_progs _finished;
+MPRINT(_RUNPAR):   merge _all_progs(in=a) _still_running(in=b);
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   if a and b then output _all_progs;
+MPRINT(_RUNPAR):   if a and ~b then output _finished;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: There were 5 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: The data set WORK._FINISHED has 0 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * write to the log when a program finishes;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set _finished;
+MPRINT(_RUNPAR):   put "The following program finished at 25FEB16 16:20:";
+MPRINT(_RUNPAR):   put filename;
+MPRINT(_RUNPAR):   put " ";
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 0 observations read from the data set WORK._FINISHED.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * if there are no more obs in _all_progs, then exit;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+25                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 14 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _still_running;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,3)))="SO.";
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".os",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 2 observations read from the data set WORK._FILENAMES.
+      WHERE STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 3)))='SO.';
+NOTE: The data set WORK._STILL_RUNNING has 2 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data= _still_running;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 2 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._STILL_RUNNING has 2 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data=_all_progs out=_all_progs;
+26                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: The data set WORK._ALL_PROGS has 5 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * all progs is a list of programs still running, if it is empty, we exit the loop;
+MPRINT(_RUNPAR):   data _all_progs _finished;
+MPRINT(_RUNPAR):   merge _all_progs(in=a) _still_running(in=b);
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   if a and b then output _all_progs;
+MPRINT(_RUNPAR):   if a and ~b then output _finished;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 5 observations read from the data set WORK._ALL_PROGS.
+NOTE: There were 2 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._ALL_PROGS has 2 observations and 1 variables.
+NOTE: The data set WORK._FINISHED has 3 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * write to the log when a program finishes;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set _finished;
+MPRINT(_RUNPAR):   put "The following program finished at 25FEB16 16:20:";
+MPRINT(_RUNPAR):   put filename;
+MPRINT(_RUNPAR):   put " ";
+MPRINT(_RUNPAR):   run;
+
+The following program finished at 25FEB16 16:20:
+PARALLEL_TEST_TO_WRITE_1
+
+The following program finished at 25FEB16 16:20:
+PARALLEL_TEST_TO_WRITE_2
+
+The following program finished at 25FEB16 16:20:
+PARALLEL_TEST_TO_WRITE_4
+NOTE: There were 3 observations read from the data set WORK._FINISHED.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * if there are no more obs in _all_progs, then exit;
+MPRINT(_RUNPAR):   * wait 2 minutes before checking;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   slept = sleep(20000);
+MPRINT(_RUNPAR):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           20.00 seconds
+      cpu time            0.00 seconds
+27                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ 
+"/prod-04/kroger/Lev1/analysis/share/mi/analyst_toolkit/macros/sandbox/parallel_test_parallel/";
+MPRINT(GET_FILENAMES):   data _filenames(keep=filename);
+MPRINT(GET_FILENAMES):   handle=dopen( '_dir_' );
+MPRINT(GET_FILENAMES):   if handle > 0 then do;
+MPRINT(GET_FILENAMES):   count=dnum(handle);
+MPRINT(GET_FILENAMES):   do i=1 to count;
+MPRINT(GET_FILENAMES):   filename=dread(handle,i);
+MPRINT(GET_FILENAMES):   output _filenames;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   end;
+MPRINT(GET_FILENAMES):   rc=dclose(handle);
+MPRINT(GET_FILENAMES):   run;
+
+NOTE: The data set WORK._FILENAMES has 12 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GET_FILENAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MPRINT(_RUNPAR):  ;
+MPRINT(_RUNPAR):   data _still_running;
+MPRINT(_RUNPAR):   set _filenames;
+MPRINT(_RUNPAR):   where strip(upcase(substr(reverse(strip(filename)),1,3)))="SO.";
+MPRINT(_RUNPAR):   filename = upcase(tranwrd(filename,".os",""));
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 0 observations read from the data set WORK._FILENAMES.
+      WHERE STRIP(UPCASE(SUBSTR(REVERSE(STRIP(filename)), 1, 3)))='SO.';
+NOTE: The data set WORK._STILL_RUNNING has 0 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data= _still_running;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: Input data set is empty.
+NOTE: The data set WORK._STILL_RUNNING has 0 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   proc sort data=_all_progs out=_all_progs;
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 2 observations read from the data set WORK._ALL_PROGS.
+NOTE: The data set WORK._ALL_PROGS has 2 observations and 1 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+28                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+      cpu time            0.01 seconds
+      
+
+MPRINT(_RUNPAR):   * all progs is a list of programs still running, if it is empty, we exit the loop;
+MPRINT(_RUNPAR):   data _all_progs _finished;
+MPRINT(_RUNPAR):   merge _all_progs(in=a) _still_running(in=b);
+MPRINT(_RUNPAR):   by filename;
+MPRINT(_RUNPAR):   if a and b then output _all_progs;
+MPRINT(_RUNPAR):   if a and ~b then output _finished;
+MPRINT(_RUNPAR):   run;
+
+NOTE: There were 2 observations read from the data set WORK._ALL_PROGS.
+NOTE: There were 0 observations read from the data set WORK._STILL_RUNNING.
+NOTE: The data set WORK._ALL_PROGS has 0 observations and 1 variables.
+NOTE: The data set WORK._FINISHED has 2 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * write to the log when a program finishes;
+MPRINT(_RUNPAR):   data _null_;
+MPRINT(_RUNPAR):   set _finished;
+MPRINT(_RUNPAR):   put "The following program finished at 25FEB16 16:20:";
+MPRINT(_RUNPAR):   put filename;
+MPRINT(_RUNPAR):   put " ";
+MPRINT(_RUNPAR):   run;
+
+The following program finished at 25FEB16 16:20:
+PARALLEL_TEST_TO_WRITE_3
+
+The following program finished at 25FEB16 16:20:
+PARALLEL_TEST_TO_WRITE_5
+NOTE: There were 2 observations read from the data set WORK._FINISHED.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(_RUNPAR):   * if there are no more obs in _all_progs, then exit;
+MPRINT(_RUNPAR):   proc datasets lib=work;
+                                                             Directory
+
+                       Libref             WORK                                                               
+                       Engine             V9                                                                 
+                       Physical Name      /sastmp/kroger/SAS_work75D400004870_us-ham-svb-0320.dunnhumby.co.uk
+                       Filename           /sastmp/kroger/SAS_work75D400004870_us-ham-svb-0320.dunnhumby.co.uk
+                       Inode Number       36503553                                                           
+                       Access Permission  rwx------                                                          
+                       Owner Name         brianr                                                             
+                       File Size (bytes)  4096                                                               
+
+
+                                                    Member       File
+                                 #  Name            Type         Size  Last Modified
+
+                                 1  PROFILE         CATALOG     12288  25-Feb-16 16:20:13         
+                                 2  REGSTRY         ITEMSTOR    32768  25-Feb-16 16:20:03         
+29                                                         The SAS System                          16:20 Thursday, February 25, 2016
+
+                                                    Member       File
+                                 #  Name            Type         Size  Last Modified
+
+                                 3  SASMACR         CATALOG    155648  25-Feb-16 16:20:23         
+                                 4  _ALL_PROGS      DATA        24576  25-Feb-16 16:22:27         
+                                 5  _FILENAMES      DATA        24576  25-Feb-16 16:22:27         
+                                 6  _FINISHED       DATA        24576  25-Feb-16 16:22:27         
+                                 7  _STILL_RUNNING  DATA        24576  25-Feb-16 16:22:27         
+MPRINT(_RUNPAR):   delete _finished _all_progs: _still_running;
+MPRINT(_RUNPAR):   run;
+
+NOTE: Deleting WORK._FINISHED (memtype=DATA).
+NOTE: Deleting WORK._ALL_PROGS (memtype=DATA).
+NOTE: Deleting WORK._STILL_RUNNING (memtype=DATA).
+MPRINT(MASK_CODE):  ;
+MPRINT(PARALLEL):  ;
+1208       
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.00 seconds
+      
+
+1209       data par.third_dat;
+1210       	x ='this was written 3rd after the parallel ran';
+1211       run;
+
+NOTE: The data set PAR.THIRD_DAT has 1 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.15 seconds
+      cpu time            0.00 seconds
+      
+
+NOTE: SAS Institute Inc., SAS Campus Drive, Cary, NC USA 27513-2414
+NOTE: The SAS System used:
+      real time           2:24.52
+      cpu time            0.81 seconds
+      
